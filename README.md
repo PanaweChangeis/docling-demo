@@ -61,8 +61,7 @@ Recommended:
 
 Ubuntu 22.04 LTS
 Instance type:
-t3.large (2 vCPU, 8GB RAM) or
-c6i.large (faster CPU)
+g4dn, g5 etc.
 Open security group ports:
 22 (SSH)
 8501 (Streamlit)
