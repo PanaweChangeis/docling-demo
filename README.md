@@ -41,3 +41,161 @@ OpenRouter API – LLM + Embeddings
 Chroma – Vector storage
 
 Python 3.10+
+
+📦 Installation (Local)
+1. Clone the repository
+git clone https://github.com/<your-username>/<your-repo>.git
+cd <your-repo>
+
+2. Create a virtual environment
+python -m venv venv
+source venv/bin/activate       # macOS/Linux
+venv\Scripts\activate          # Windows
+
+3. Install dependencies
+pip install --upgrade pip
+pip install -r requirements.txt
+
+4. Set environment variables
+
+Create a .env file:
+
+OPENROUTER_API_KEY=sk-or-xxxxx
+
+5. Run the app
+streamlit run app.py
+
+
+Visit:
+
+http://localhost:8501
+
+☁️ Deploy on AWS EC2 (Fast OCR + Faster Processing)
+1. Launch an EC2 Instance
+
+Recommended:
+
+Ubuntu 22.04 LTS
+
+Instance type:
+
+t3.large (2 vCPU, 8GB RAM) or
+
+c6i.large (faster CPU)
+
+Open security group ports:
+
+22 (SSH)
+
+8501 (Streamlit)
+
+2. SSH into server
+ssh -i key.pem ubuntu@EC2_PUBLIC_IP
+
+3. Install system dependencies
+sudo apt update
+sudo apt install -y python3 python3-venv python3-pip git
+
+4. Clone your repo
+git clone https://github.com/<your-username>/<your-repo>.git
+cd <your-repo>
+
+5. Create virtual environment
+python3 -m venv venv
+source venv/bin/activate
+pip install -r requirements.txt
+
+6. Add OpenRouter key
+nano .env
+
+
+Insert:
+
+OPENROUTER_API_KEY=sk-or-xxxxx
+
+7. Run Streamlit publicly
+streamlit run app.py --server.address 0.0.0.0 --server.port 8501
+
+
+Visit:
+
+http://EC2_PUBLIC_IP:8501
+
+📁 Project Structure
+.
+├── app.py                     # Streamlit main app
+├── requirements.txt
+├── .env.example
+├── src/
+│   ├── document_processor.py  # Docling processing + OCR
+│   ├── vectorstore.py         # Embedding + Chroma handling
+│   ├── tools.py               # Search tool for LangChain agent
+│   ├── agent.py               # ReAct agent creation
+│   ├── structure_visualizer.py# Document structure viewer
+│
+├── chroma_db/                 # Persistent vector db (auto-created)
+├── outputs/                   # Extracted tables/images (auto-created)
+└── README.md
+
+🧼 Resetting the Index
+
+The sidebar has a button:
+
+🧹 Reset index & chat
+
+This clears:
+
+chroma_db/
+
+outputs/
+
+Document cache
+
+Vector index
+
+Chat messages
+
+Use if:
+
+You upload bad PDFs
+
+OCR extraction fails
+
+You want to load new documents cleanly
+
+🧪 Troubleshooting
+OCR is slow
+
+Scanned PDFs require full OCR → use EC2 with more CPU or GPU.
+
+Vectorstore loads slowly
+
+Increase instance size:
+c6i.xlarge or m6i.xlarge.
+
+"No usable chunks" error
+
+Document has no extractable text → upload a clearer / higher-quality scan.
+
+"Model does not exist"
+
+OpenRouter expects model names like:
+
+openrouter/openai/gpt-4o-mini
+
+
+(Not the regular OpenAI names.)
+
+🤝 Contributing
+
+Feel free to open:
+
+Issues
+
+Pull requests
+
+Feature requests
+
+📜 License
+
+MIT License (or specify your own)
