@@ -1,45 +1,29 @@
-📄 Document Intelligence Assistant
+📄 #Document Intelligence Assistant
 
 A Streamlit-powered application that converts documents (PDF, DOCX, PPTX, HTML) into a fully interactive AI-powered chatbot using Docling, LangChain, OpenRouter, and Chroma vector stores.
-
 The system extracts text, structure, tables, and images from documents using OCR and advanced parsing, indexes the content into a vector database, and allows you to ask natural-language questions with responses grounded in the document.
 
 🚀 Features
 
 🧠 AI-powered Q&A over documents
-
 🔍 Semantic search with vector embeddings
-
 📄 OCR support for scanned PDFs
-
 🗂️ Document structure viewer (tables, hierarchy, images)
-
 💾 Persistent vector index using Chroma
-
 🎛️ Reset button to clear index & chat history
-
 🧩 Multiple file format support:
 
 PDF
-
 DOCX
-
 PPTX
-
 HTML
-
 🏗️ Tech Stack
 
 Streamlit – UI
-
 Docling – Document & OCR processing
-
 LangChain – LLM orchestration & agents
-
 OpenRouter API – LLM + Embeddings
-
 Chroma – Vector storage
-
 Python 3.10+
 
 📦 Installation (Local)
@@ -65,9 +49,7 @@ OPENROUTER_API_KEY=sk-or-xxxxx
 5. Run the app
 streamlit run app.py
 
-
 Visit:
-
 http://localhost:8501
 
 ☁️ Deploy on AWS EC2 (Fast OCR + Faster Processing)
@@ -76,17 +58,11 @@ http://localhost:8501
 Recommended:
 
 Ubuntu 22.04 LTS
-
 Instance type:
-
 t3.large (2 vCPU, 8GB RAM) or
-
 c6i.large (faster CPU)
-
 Open security group ports:
-
 22 (SSH)
-
 8501 (Streamlit)
 
 2. SSH into server
@@ -118,24 +94,8 @@ streamlit run app.py --server.address 0.0.0.0 --server.port 8501
 
 
 Visit:
-
 http://EC2_PUBLIC_IP:8501
 
-📁 Project Structure
-.
-├── app.py                     # Streamlit main app
-├── requirements.txt
-├── .env.example
-├── src/
-│   ├── document_processor.py  # Docling processing + OCR
-│   ├── vectorstore.py         # Embedding + Chroma handling
-│   ├── tools.py               # Search tool for LangChain agent
-│   ├── agent.py               # ReAct agent creation
-│   ├── structure_visualizer.py# Document structure viewer
-│
-├── chroma_db/                 # Persistent vector db (auto-created)
-├── outputs/                   # Extracted tables/images (auto-created)
-└── README.md
 
 🧼 Resetting the Index
 
@@ -144,15 +104,10 @@ The sidebar has a button:
 🧹 Reset index & chat
 
 This clears:
-
 chroma_db/
-
 outputs/
-
 Document cache
-
 Vector index
-
 Chat messages
 
 Use if:
@@ -183,8 +138,6 @@ OpenRouter expects model names like:
 
 openrouter/openai/gpt-4o-mini
 
-
-(Not the regular OpenAI names.)
 
 🤝 Contributing
 
