@@ -47,33 +47,6 @@ def initialize_session_state():
         st.session_state.docling_docs = []
 
 
-def reset_index():
-    """Reset vector index, outputs, and chat state."""
-    # Remove persisted Chroma index
-    if os.path.exists("chroma_db"):
-        try:
-            shutil.rmtree("chroma_db")
-        except Exception as e:
-            print(f"⚠️ Could not delete chroma_db: {e}")
-
-    # (Optional) also clear processed outputs
-    if os.path.exists("outputs"):
-        try:
-            shutil.rmtree("outputs")
-        except Exception as e:
-            print(f"⚠️ Could not delete outputs folder: {e}")
-
-    # Clear Streamlit state
-    st.session_state.vectorstore = None
-    st.session_state.agent = None
-    st.session_state.docling_docs = []
-    st.session_state.messages = []
-    st.session_state.uploaded_files = []
-    st.session_state.processing_status = "not_started"
-
-    st.success("🧹 Index & chat history reset. You can upload and process new documents.")
-
-
 def process_and_index(uploaded_files):
     """Process uploaded documents and create vector store."""
     try:
@@ -91,25 +64,16 @@ def process_and_index(uploaded_files):
             )
             return
 
-        # Step 2: Create or load vector store (persistent Chroma)
+        # Step 2: Chunk and create a NEW vector store just for these docs
         vs_manager = VectorStoreManager()
 
-        # Try loading an existing vector store first
-        existing_vs = vs_manager.load_existing_vectorstore()
+        with st.spinner("✂️ Chunking documents..."):
+            chunks = vs_manager.chunk_documents(documents)
 
-        if existing_vs is not None:
-            with st.spinner("📦 Loading existing vector store from disk..."):
-                vectorstore = existing_vs
-                print("📂 Using existing vector store from disk.")
-        else:
-            with st.spinner("✂️ Chunking documents..."):
-                chunks = vs_manager.chunk_documents(documents)
-
-            with st.spinner(
-                "🔢 Creating vector store (this may take a while for large scanned PDFs)..."
-            ):
-                vectorstore = vs_manager.create_vectorstore(chunks)
-                print("💾 New vector store created and persisted.")
+        with st.spinner(
+            "🔢 Creating vector store (this may take a while for large scanned PDFs)..."
+        ):
+            vectorstore = vs_manager.create_vectorstore(chunks)
 
         st.session_state.vectorstore = vectorstore
 
@@ -125,7 +89,6 @@ def process_and_index(uploaded_files):
     except Exception as e:
         st.error(f"❌ Error: {str(e)}")
         st.session_state.processing_status = "error"
-
 
 def render_sidebar():
     """Render the sidebar with setup controls."""
@@ -164,11 +127,6 @@ def render_sidebar():
             st.success("✅ Ready to chat!")
         elif st.session_state.processing_status == "error":
             st.error("❌ Error occurred")
-
-        # Reset index button
-        st.divider()
-        if st.button("🧹 Reset index & chat", use_container_width=True):
-            reset_index()
 
         # Tips
         with st.expander("💡 Tips"):
