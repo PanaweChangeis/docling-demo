@@ -1,4 +1,4 @@
-📄 #Document Intelligence Assistant
+📄 Document Intelligence Assistant
 
 A Streamlit-powered application that converts documents (PDF, DOCX, PPTX, HTML) into a fully interactive AI-powered chatbot using Docling, LangChain, OpenRouter, and Chroma vector stores.
 The system extracts text, structure, tables, and images from documents using OCR and advanced parsing, indexes the content into a vector database, and allows you to ask natural-language questions with responses grounded in the document.
@@ -17,6 +17,7 @@ PDF
 DOCX
 PPTX
 HTML
+
 🏗️ Tech Stack
 
 Streamlit – UI
@@ -27,6 +28,7 @@ Chroma – Vector storage
 Python 3.10+
 
 📦 Installation (Local)
+
 1. Clone the repository
 git clone https://github.com/<your-username>/<your-repo>.git
 cd <your-repo>
@@ -119,6 +121,7 @@ OCR extraction fails
 You want to load new documents cleanly
 
 🧪 Troubleshooting
+
 OCR is slow
 
 Scanned PDFs require full OCR → use EC2 with more CPU or GPU.
