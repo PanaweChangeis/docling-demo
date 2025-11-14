@@ -154,7 +154,7 @@ class VectorStoreManager:
         )
 
         self.text_splitter = RecursiveCharacterTextSplitter(
-            chunk_size=2500,
+            chunk_size=3000,
             chunk_overlap=200,
             length_function=len,
         )
