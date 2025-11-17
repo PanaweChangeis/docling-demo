@@ -11,3 +11,4 @@ chromadb>=0.4.22
 tiktoken>=0.5.0
 pandas>=2.0.0
 numpy<2
+langchain-text-splitters>=1.0.0
