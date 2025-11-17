@@ -118,7 +118,7 @@ class DocumentProcessor:
         pipeline_options.do_ocr = True
         pipeline_options.do_table_structure = True
         pipeline_options.generate_picture_images = True  # Enable image extraction
-        pipeline_options.images_scale = 2.0  # Higher resolution for better quality
+        pipeline_options.images_scale = 1.0  # Higher resolution for better quality
 
         # Initialize converter with PDF options
         self.converter = DocumentConverter(
