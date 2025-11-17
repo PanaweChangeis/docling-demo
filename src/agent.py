@@ -61,8 +61,7 @@ def create_documentation_agent(
 
     agent = create_react_agent(
         model=llm,
-        tools=tools,
-        state_modifier=SYSTEM_PROMPT,
+        tools=tools
     )
 
     return agent
