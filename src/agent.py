@@ -22,20 +22,34 @@ When answering:
 """
 
 
+import os
 from typing import List
+
+from langchain_core.tools import BaseTool
 from langchain_openai import ChatOpenAI
 from langgraph.prebuilt import create_react_agent
-from langgraph.checkpoints.memory import MemorySaver
-import os
 
 SYSTEM_PROMPT = """
 You are a helpful assistant that strictly answers using the provided document search tool.
-If the information is not in the documents, say: 'I don't know based on the provided documents.'
+If the information is not in the documents, reply:
+"I don't know based on the provided documents."
+
+- Never invent facts that aren't supported by the documents.
+- Prefer concise, clear answers.
 """
 
-def create_documentation_agent(tools: List, model_name="meta-llama/llama-3.1-8b-instruct"):
+
+def create_documentation_agent(
+    tools: List[BaseTool],
+    model_name: str = "meta-llama/llama-3.1-8b-instruct",
+):
     """
-    Works with OpenRouter + Zero Retention approved models.
+    Create a document QA agent using OpenRouter + LangGraph REACT.
+
+    Requirements:
+    - OPENROUTER_API_KEY must be set in the environment.
+    - The chosen model must be available under your data policy
+      (e.g. llama 3.1 instruct models for Zero Retention).
     """
 
     llm = ChatOpenAI(
@@ -45,13 +59,10 @@ def create_documentation_agent(tools: List, model_name="meta-llama/llama-3.1-8b-
         base_url="https://openrouter.ai/api/v1",
     )
 
-    memory = MemorySaver()
-
     agent = create_react_agent(
         model=llm,
         tools=tools,
         state_modifier=SYSTEM_PROMPT,
-        checkpointer=memory,
     )
 
     return agent
