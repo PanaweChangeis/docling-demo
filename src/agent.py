@@ -22,54 +22,35 @@ When answering:
 """
 
 
-from typing import List, Optional
-
-from langchain_core.tools import BaseTool
-from langchain_core.prompts import ChatPromptTemplate
-from langgraph.prebuilt import create_chat_agent
+from typing import List
+from langchain_openai import ChatOpenAI
+from langgraph.prebuilt import create_react_agent
 from langgraph.checkpoints.memory import MemorySaver
-from langchain_ollama import OllamaLLM
+import os
 
 SYSTEM_PROMPT = """
-You are a helpful assistant who answers questions about uploaded documents.
-Use the provided context when available. If you don't have enough information
-from the documents, say that you don't know instead of making something up.
+You are a helpful assistant that strictly answers using the provided document search tool.
+If the information is not in the documents, say: 'I don't know based on the provided documents.'
 """
 
-
-def create_documentation_agent(
-    tools: Optional[List[BaseTool]] = None,
-    model_name: str = "llama3",
-):
+def create_documentation_agent(tools: List, model_name="meta-llama/llama-3.1-8b-instruct"):
     """
-    Create a simple document assistant agent using a local Ollama model.
-
-    NOTE:
-        We are NOT using tool-calling here because local LLMs (OllamaLLM)
-        do not support the OpenAI-style .bind_tools() interface that
-        LangGraph's create_react_agent expects.
+    Works with OpenRouter + Zero Retention approved models.
     """
 
-    # Local LLM – no OpenAI / OpenRouter keys needed
-    llm = OllamaLLM(
+    llm = ChatOpenAI(
         model=model_name,
-        temperature=0.1,
-    )
-
-    # Basic chat-style prompt
-    prompt = ChatPromptTemplate.from_messages(
-        [
-            ("system", SYSTEM_PROMPT),
-            ("user", "{input}"),
-        ]
+        temperature=0,
+        api_key=os.getenv("OPENROUTER_API_KEY"),
+        base_url="https://openrouter.ai/api/v1",
     )
 
     memory = MemorySaver()
 
-    # Simple chat agent compatible with OllamaLLM
-    agent = create_chat_agent(
-        llm=llm,
-        prompt=prompt,
+    agent = create_react_agent(
+        model=llm,
+        tools=tools,
+        state_modifier=SYSTEM_PROMPT,
         checkpointer=memory,
     )
 
