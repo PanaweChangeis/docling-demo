@@ -51,15 +51,7 @@ def create_documentation_agent(
 
     agent = create_react_agent(
         model=llm,
-        tools=tools,
-        # 👇 tell the model explicitly NOT to show tool JSON
-        state_modifier=(
-            "You are a helpful document QA assistant. "
-            "You have tools such as 'search_documents' to inspect the user's "
-            "uploaded files. When you need information, CALL the tools directly. "
-            "Never print raw JSON tool calls or describe how you call tools. "
-            "Only reply to the user in natural language with the answer."
-        ),
+        tools=tools
     )
 
     return agent
