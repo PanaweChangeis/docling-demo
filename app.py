@@ -162,7 +162,7 @@ def render_sidebar():
                     st.write(f"- {file.name} ({file.type})")
 
             # Process button
-            if st.button("🚀 Process & Index", use_container_width=True):
+            if st.button("🚀 Process & Index", width="stretch"):
                 st.session_state.uploaded_files = uploaded_files
                 process_and_index(uploaded_files)
 
@@ -251,7 +251,7 @@ def render_structure_viz():
                 for k, v in sorted(summary["text_types"].items(), key=lambda x: -x[1])
             ]
         )
-        st.dataframe(text_types_df, use_container_width=True)
+        st.dataframe(text_types_df, width="stretch")
 
     # ---------- TAB 2: HIERARCHY ----------
     with tab2:
@@ -314,7 +314,7 @@ def render_structure_viz():
 
                     # Safely render – even if Arrow still complains
                     try:
-                        st.dataframe(df, use_container_width=True)
+                        st.dataframe(df, width="stretch")
                     except ValueError as e:
                         # Last-resort fallback so the *app doesn’t crash*
                         st.warning(
@@ -346,7 +346,7 @@ def render_structure_viz():
                     st.caption(pic_data["caption"])
 
                 if pic_data["pil_image"] is not None:
-                    st.image(pic_data["pil_image"], use_container_width=True)
+                    st.image(pic_data["pil_image"], width="stretch")
                 else:
                     st.info("Image data not available")
 

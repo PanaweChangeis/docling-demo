@@ -3,10 +3,11 @@ LangGraph agent configuration and setup.
 """
 from typing import List
 import os 
-from langchain_core.tools import BaseTool
-from langchain_openai import ChatOpenAI
+from langchain_core.prompts import ChatPromptTemplate
+from langchain_openai import create_chat_agent, ChatOpenAI
 from langgraph.prebuilt import create_react_agent  
 from langgraph.checkpoint.memory import MemorySaver
+from langchain_ollama import OllamaLLM
 
 
 # System prompt for the document intelligence assistant
@@ -29,13 +30,13 @@ When answering:
 """
 
 
-def create_documentation_agent(tools: List[BaseTool], model_name: str = "openai/gpt-4o-mini"):
+def create_documentation_agent(tools: List = None, model_name: str = "llama3"):
     """
     Create a document intelligence assistant agent using LangGraph.
 
     Args:
         tools: List of tools the agent can use
-        model_name: Name of the OpenAI model to use
+        model_name: Name of the model to use
 
     Returns:
         A configured LangGraph agent
@@ -43,11 +44,10 @@ def create_documentation_agent(tools: List[BaseTool], model_name: str = "openai/
     # Initialize the language model
     #llm = ChatOpenAI(model=model_name, temperature=0)--previousc code for openai
     # Initialize the language model (OpenRouter)
-    from langchain_community.llms import Ollama
 
-    llm = Ollama(
+    llm = OllamaLLM(
         model="llama3",
-        temperature=0,
+        temperature=0.2,
     )
 
     # Create a memory saver for conversation history
