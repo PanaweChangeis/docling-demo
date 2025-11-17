@@ -140,17 +140,15 @@ from langchain_core.documents import Document
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 from langchain_openai import OpenAIEmbeddings
 from langchain_chroma import Chroma
-
+from langchain_community.embeddings import HuggingFaceEmbeddings 
 
 class VectorStoreManager:
     """Manages document chunking, embedding, and vector storage."""
 
     def __init__(self):
         """Initialize the vector store manager."""
-        self.embeddings = OpenAIEmbeddings(
-            model="text-embedding-3-small",
-            openai_api_key=os.getenv("OPENROUTER_API_KEY"),
-            openai_api_base="https://openrouter.ai/api/v1",
+        self.embeddings = HuggingFaceEmbeddings(
+            model_name="sentence-transformers/all-MiniLM-L6-v2"
         )
 
         self.text_splitter = RecursiveCharacterTextSplitter(

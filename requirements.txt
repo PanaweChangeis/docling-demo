@@ -12,3 +12,8 @@ tiktoken>=0.5.0
 pandas>=2.0.0
 numpy<2
 langchain-text-splitters>=1.0.0
+langchain-community>=0.1.0
+langchain-embeddings-huggingface>=0.1.0
+langchain-embeddings-openai>=0.1.0
+langchain-embeddings-cohere>=0.1.0
+langchain-embeddings-sentence-transformers>=0.1.0
