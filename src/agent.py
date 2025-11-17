@@ -4,7 +4,6 @@ LangGraph agent configuration and setup.
 from typing import List
 import os 
 from langchain_core.prompts import ChatPromptTemplate
-from langchain_openai import create_chat_agent, ChatOpenAI
 from langgraph.prebuilt import create_react_agent  
 from langgraph.checkpoint.memory import MemorySaver
 from langchain_ollama import OllamaLLM
