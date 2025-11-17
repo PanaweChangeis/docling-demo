@@ -278,15 +278,45 @@ def render_structure_viz():
                 if table_data["caption"]:
                     st.caption(table_data["caption"])
 
-                if not table_data["is_empty"]:
-                    st.dataframe(table_data["dataframe"], use_container_width=True)
+        #         if not table_data["is_empty"]:
+        #             st.dataframe(table_data["dataframe"], use_container_width=True)
+        #         else:
+        #             st.info("Table is empty")
+
+        #         st.divider()
+        # else:
+        #     st.info("No tables found in this document")
+                if not table_data['is_empty']:
+                    # Make a copy so we don't mutate the original
+                    df = table_data["dataframe"].copy()
+
+                    # 1) Reset index to avoid weird index issues
+                    df = df.reset_index(drop=True)
+
+                    # 2) Clean and deduplicate column names
+                    cleaned_cols = []
+                    seen = {}
+
+                    for i, col in enumerate(df.columns):
+                        # Turn None/NaN/'' into a default name
+                        name = str(col).strip() if str(col).strip() else f"col_{i+1}"
+
+                        # If we've already seen this name, add a suffix (_2, _3, ...)
+                        if name in seen:
+                            seen[name] += 1
+                            name = f"{name}_{seen[name]}"
+                        else:
+                            seen[name] = 0
+
+                        cleaned_cols.append(name)
+
+                    df.columns = cleaned_cols
+
+                    # 3) Now Streamlit/pyarrow are happy
+                    st.dataframe(df, use_container_width=True)
                 else:
                     st.info("Table is empty")
-
-                st.divider()
-        else:
-            st.info("No tables found in this document")
-
+                
     with tab4:
         st.subheader("Images")
         pictures_info = visualizer.get_pictures_info()
