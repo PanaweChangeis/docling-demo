@@ -54,11 +54,26 @@ def create_documentation_agent(tools: List[BaseTool], model_name: str = "openai/
     memory = MemorySaver()
 
     # Create the ReAct agent
-    agent = create_react_agent( 
-        llm,
-        tools=tools,
-        prompt=SYSTEM_PROMPT,
+    # agent = create_react_agent( 
+    #     llm,
+    #     tools=tools,
+    #     prompt=SYSTEM_PROMPT,
+    #     checkpointer=memory
+    # ) --previous code for openai
+
+    from langchain_core.prompts import ChatPromptTemplate
+    from langgraph.prebuilt import create_chat_agent
+
+    prompt = ChatPromptTemplate.from_messages([
+        ("system", SYSTEM_PROMPT),
+        ("user", "{input}")
+    ])
+
+    agent = create_chat_agent(
+        llm=llm,
+        prompt=prompt,
         checkpointer=memory
     )
+
 
     return agent

@@ -9,6 +9,7 @@ import pandas as pd
 from dotenv import load_dotenv
 from langchain_core.messages import HumanMessage, AIMessage
 from streamlit_extras.bottom_container import bottom
+from langchain_ollama import OllamaLLM
 
 # Load environment variables
 load_dotenv()
