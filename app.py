@@ -110,7 +110,7 @@ def process_and_index(uploaded_files):
 
         # Step 2: Vectorstore (load existing or build)
         vs_manager = VectorStoreManager()
-        existing_vs = vs_manager.load_existing_vectorstore()
+        existing_vs = vs_manager.load_vectorstore()
 
         if existing_vs is not None:
             with st.spinner("📦 Loading existing vector store from disk..."):
