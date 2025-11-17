@@ -31,13 +31,10 @@ from langchain_core.tools import BaseTool
 
 def create_documentation_agent(
     tools: List[BaseTool],
-    model_name: str = "openrouter/auto",  # 🔁 let OpenRouter pick best model
+    model_name: str = "openai/gpt-4.1-mini",   # 👈 tools-capable model
 ):
     """
     Create a document QA agent using OpenRouter + LangGraph REACT agent.
-
-    - Uses OpenRouter Auto Router by default (GPT-4, Claude, Gemini, etc.).
-    - Still respects your org's zero-retention policy.
     """
 
     llm = ChatOpenAI(
@@ -47,15 +44,22 @@ def create_documentation_agent(
         base_url="https://openrouter.ai/api/v1",
         extra_body={
             "provider": {
-                "zdr": True
-            },
-
+                "zdr": True  
+            }
         },
     )
 
     agent = create_react_agent(
         model=llm,
         tools=tools,
+        # 👇 tell the model explicitly NOT to show tool JSON
+        state_modifier=(
+            "You are a helpful document QA assistant. "
+            "You have tools such as 'search_documents' to inspect the user's "
+            "uploaded files. When you need information, CALL the tools directly. "
+            "Never print raw JSON tool calls or describe how you call tools. "
+            "Only reply to the user in natural language with the answer."
+        ),
     )
 
     return agent
