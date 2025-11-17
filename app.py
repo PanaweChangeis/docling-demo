@@ -47,37 +47,84 @@ def initialize_session_state():
         st.session_state.docling_docs = []
 
 
+# def process_and_index(uploaded_files):
+#     """Process uploaded documents and create vector store."""
+#     try:
+#         # Step 1: Process documents with Docling
+#         with st.spinner(
+#             f"📄 Processing {len(uploaded_files)} document(s) with Docling..."
+#         ):
+#             processor = DocumentProcessor()
+#             documents, docling_docs = processor.process_uploaded_files(uploaded_files)
+#             st.session_state.docling_docs = docling_docs
+
+#         if not documents:
+#             st.error(
+#                 "No documents were processed. Please check the files and try again."
+#             )
+#             return
+
+#         # Step 2: Chunk and create a NEW vector store just for these docs
+#         vs_manager = VectorStoreManager()
+
+#         with st.spinner("✂️ Chunking documents..."):
+#             chunks = vs_manager.chunk_documents(documents)
+
+#         with st.spinner(
+#             "🔢 Creating vector store (this may take a while for large scanned PDFs)..."
+#         ):
+#             vectorstore = vs_manager.create_vectorstore(chunks)
+
+#         st.session_state.vectorstore = vectorstore
+
+#         # Step 3: Create agent
+#         with st.spinner("🤖 Creating agent..."):
+#             search_tool = create_search_tool(vectorstore)
+#             agent = create_documentation_agent([search_tool])
+#             st.session_state.agent = agent
+
+#         st.session_state.processing_status = "completed"
+#         st.success("✅ Documents indexed! You can now chat with them below.")
+
+#     except Exception as e:
+#         st.error(f"❌ Error: {str(e)}")
+#         st.session_state.processing_status = "error"
+
 def process_and_index(uploaded_files):
     """Process uploaded documents and create vector store."""
     try:
-        # Step 1: Process documents with Docling
-        with st.spinner(
-            f"📄 Processing {len(uploaded_files)} document(s) with Docling..."
-        ):
+        # Step 1: Docling
+        with st.spinner(f"📄 Processing {len(uploaded_files)} document(s) with Docling..."):
             processor = DocumentProcessor()
             documents, docling_docs = processor.process_uploaded_files(uploaded_files)
             st.session_state.docling_docs = docling_docs
 
         if not documents:
-            st.error(
-                "No documents were processed. Please check the files and try again."
+            # Friendly UI message, real error is in terminal logs
+            st.warning(
+                "⚠️ I couldn’t extract any readable text from this file.\n\n"
+                "- If it’s a scanned image, try a clearer or higher-resolution scan.\n"
+                "- If this keeps happening on EC2, double-check server dependencies (see terminal logs)."
             )
             return
 
-        # Step 2: Chunk and create a NEW vector store just for these docs
+        # Step 2: Vectorstore (load existing or build)
         vs_manager = VectorStoreManager()
+        existing_vs = vs_manager.load_existing_vectorstore()
 
-        with st.spinner("✂️ Chunking documents..."):
-            chunks = vs_manager.chunk_documents(documents)
+        if existing_vs is not None:
+            with st.spinner("📦 Loading existing vector store from disk..."):
+                vectorstore = existing_vs
+        else:
+            with st.spinner("✂️ Chunking documents..."):
+                chunks = vs_manager.chunk_documents(documents)
 
-        with st.spinner(
-            "🔢 Creating vector store (this may take a while for large scanned PDFs)..."
-        ):
-            vectorstore = vs_manager.create_vectorstore(chunks)
+            with st.spinner("🔢 Creating vector store (this may take a while for large scanned PDFs)..."):
+                vectorstore = vs_manager.create_vectorstore(chunks)
 
         st.session_state.vectorstore = vectorstore
 
-        # Step 3: Create agent
+        # Step 3: Agent
         with st.spinner("🤖 Creating agent..."):
             search_tool = create_search_tool(vectorstore)
             agent = create_documentation_agent([search_tool])
@@ -87,7 +134,11 @@ def process_and_index(uploaded_files):
         st.success("✅ Documents indexed! You can now chat with them below.")
 
     except Exception as e:
-        st.error(f"❌ Error: {str(e)}")
+        import traceback
+        print("=== PROCESS_AND_INDEX ERROR ===")
+        traceback.print_exc()   # full details only in terminal
+        st.error("❌ Something went wrong while processing this file. "
+                 "Please try again or check the server logs for details.")
         st.session_state.processing_status = "error"
 
 def render_sidebar():
@@ -227,15 +278,45 @@ def render_structure_viz():
                 if table_data["caption"]:
                     st.caption(table_data["caption"])
 
-                if not table_data["is_empty"]:
-                    st.dataframe(table_data["dataframe"], use_container_width=True)
+        #         if not table_data["is_empty"]:
+        #             st.dataframe(table_data["dataframe"], use_container_width=True)
+        #         else:
+        #             st.info("Table is empty")
+
+        #         st.divider()
+        # else:
+        #     st.info("No tables found in this document")
+                if not table_data['is_empty']:
+                    # Make a copy so we don't mutate the original
+                    df = table_data["dataframe"].copy()
+
+                    # 1) Reset index to avoid weird index issues
+                    df = df.reset_index(drop=True)
+
+                    # 2) Clean and deduplicate column names
+                    cleaned_cols = []
+                    seen = {}
+
+                    for i, col in enumerate(df.columns):
+                        # Turn None/NaN/'' into a default name
+                        name = str(col).strip() if str(col).strip() else f"col_{i+1}"
+
+                        # If we've already seen this name, add a suffix (_2, _3, ...)
+                        if name in seen:
+                            seen[name] += 1
+                            name = f"{name}_{seen[name]}"
+                        else:
+                            seen[name] = 0
+
+                        cleaned_cols.append(name)
+
+                    df.columns = cleaned_cols
+
+                    # 3) Now Streamlit/pyarrow are happy
+                    st.dataframe(df, use_container_width=True)
                 else:
                     st.info("Table is empty")
-
-                st.divider()
-        else:
-            st.info("No tables found in this document")
-
+                
     with tab4:
         st.subheader("Images")
         pictures_info = visualizer.get_pictures_info()
