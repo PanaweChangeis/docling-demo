@@ -21,35 +21,23 @@ When answering:
 4. Only search again if absolutely necessary
 """
 
-
-import os
 from typing import List
+import os
 
-from langchain_core.tools import BaseTool
 from langchain_openai import ChatOpenAI
 from langgraph.prebuilt import create_react_agent
-
-SYSTEM_PROMPT = """
-You are a helpful assistant that strictly answers using the provided document search tool.
-If the information is not in the documents, reply:
-"I don't know based on the provided documents."
-
-- Never invent facts that aren't supported by the documents.
-- Prefer concise, clear answers.
-"""
+from langchain_core.tools import BaseTool
 
 
 def create_documentation_agent(
     tools: List[BaseTool],
-    model_name: str = "meta-llama/llama-3.1-70b-instruct",
+    model_name: str = "openrouter/auto",  # 🔁 let OpenRouter pick best model
 ):
     """
-    Create a document QA agent using OpenRouter + LangGraph REACT.
+    Create a document QA agent using OpenRouter + LangGraph REACT agent.
 
-    Requirements:
-    - OPENROUTER_API_KEY must be set in the environment.
-    - The chosen model must be available under your data policy
-      (e.g. llama 3.1 instruct models for Zero Retention).
+    - Uses OpenRouter Auto Router by default (GPT-4, Claude, Gemini, etc.).
+    - Still respects your org's zero-retention policy.
     """
 
     llm = ChatOpenAI(
@@ -57,11 +45,17 @@ def create_documentation_agent(
         temperature=0,
         api_key=os.getenv("OPENROUTER_API_KEY"),
         base_url="https://openrouter.ai/api/v1",
+        extra_body={
+            "provider": {
+                "zdr": True
+            },
+
+        },
     )
 
     agent = create_react_agent(
         model=llm,
-        tools=tools
+        tools=tools,
     )
 
     return agent
