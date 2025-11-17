@@ -213,37 +213,38 @@ def render_structure_viz():
         return
 
     # Document selector
-    doc_names = [doc["filename"] for doc in st.session_state.docling_docs]
+    doc_names = [doc['filename'] for doc in st.session_state.docling_docs]
     selected_doc_name = st.selectbox("Select document to analyze:", doc_names)
 
     # Get selected document
     selected_doc_data = next(
-        (doc for doc in st.session_state.docling_docs if doc["filename"] == selected_doc_name),
-        None,
+        (doc for doc in st.session_state.docling_docs if doc['filename'] == selected_doc_name),
+        None
     )
 
     if not selected_doc_data:
         return
 
     # Create visualizer
-    visualizer = DocumentStructureVisualizer(selected_doc_data["doc"])
+    visualizer = DocumentStructureVisualizer(selected_doc_data['doc'])
 
     # Display structure in tabs
     tab1, tab2, tab3, tab4 = st.tabs(["📑 Summary", "🏗️ Hierarchy", "📊 Tables", "🖼️ Images"])
 
+    # ---------- TAB 1: SUMMARY ----------
     with tab1:
         st.subheader("Document Summary")
         summary = visualizer.get_document_summary()
 
         col1, col2, col3, col4 = st.columns(4)
         with col1:
-            st.metric("Pages", summary["num_pages"])
+            st.metric("Pages", summary['num_pages'])
         with col2:
-            st.metric("Tables", summary["num_tables"])
+            st.metric("Tables", summary['num_tables'])
         with col3:
-            st.metric("Images", summary["num_pictures"])
+            st.metric("Images", summary['num_pictures'])
         with col4:
-            st.metric("Text Items", summary["num_texts"])
+            st.metric("Text Items", summary['num_texts'])
 
         st.subheader("Content Types")
         text_types_df = pd.DataFrame(
@@ -254,6 +255,7 @@ def render_structure_viz():
         )
         st.dataframe(text_types_df, use_container_width=True)
 
+    # ---------- TAB 2: HIERARCHY ----------
     with tab2:
         st.subheader("Document Hierarchy")
         hierarchy = visualizer.get_document_hierarchy()
@@ -265,6 +267,7 @@ def render_structure_viz():
         else:
             st.info("No hierarchical structure detected")
 
+    # ---------- TAB 3: TABLES (FIXED) ----------
     with tab3:
         st.subheader("Tables")
         tables_info = visualizer.get_tables_info()
@@ -278,30 +281,28 @@ def render_structure_viz():
                 if table_data["caption"]:
                     st.caption(table_data["caption"])
 
-        #         if not table_data["is_empty"]:
-        #             st.dataframe(table_data["dataframe"], use_container_width=True)
-        #         else:
-        #             st.info("Table is empty")
-
-        #         st.divider()
-        # else:
-        #     st.info("No tables found in this document")
-                if not table_data['is_empty']:
-                    # Make a copy so we don't mutate the original
+                if not table_data["is_empty"]:
+                    # Work on a copy
                     df = table_data["dataframe"].copy()
 
-                    # 1) Reset index to avoid weird index issues
+                    # Debug logs (will show in terminal)
+                    print("Original columns:", list(df.columns))
+
+                    # Reset index to avoid index becoming a column
                     df = df.reset_index(drop=True)
 
-                    # 2) Clean and deduplicate column names
+                    # Clean + deduplicate column names
                     cleaned_cols = []
                     seen = {}
 
-                    for i, col in enumerate(df.columns):
-                        # Turn None/NaN/'' into a default name
-                        name = str(col).strip() if str(col).strip() else f"col_{i+1}"
+                    for idx, col in enumerate(df.columns):
+                        name = str(col).strip()
 
-                        # If we've already seen this name, add a suffix (_2, _3, ...)
+                        # Replace blank / NaN / None headers
+                        if not name:
+                            name = f"col_{idx+1}"
+
+                        # Make sure names are unique
                         if name in seen:
                             seen[name] += 1
                             name = f"{name}_{seen[name]}"
@@ -311,12 +312,18 @@ def render_structure_viz():
                         cleaned_cols.append(name)
 
                     df.columns = cleaned_cols
+                    print("Cleaned columns:", cleaned_cols)
 
-                    # 3) Now Streamlit/pyarrow are happy
+                    # Now safe for Streamlit / pyarrow
                     st.dataframe(df, use_container_width=True)
                 else:
                     st.info("Table is empty")
-                
+
+                st.divider()
+        else:
+            st.info("No tables found in this document")
+
+    # ---------- TAB 4: IMAGES ----------
     with tab4:
         st.subheader("Images")
         pictures_info = visualizer.get_pictures_info()
@@ -330,19 +337,17 @@ def render_structure_viz():
                 if pic_data["caption"]:
                     st.caption(pic_data["caption"])
 
-                # Display the actual image if available
                 if pic_data["pil_image"] is not None:
                     st.image(pic_data["pil_image"], use_container_width=True)
                 else:
                     st.info("Image data not available")
 
-                # Show bounding box info
                 if pic_data["bounding_box"]:
                     bbox = pic_data["bounding_box"]
                     with st.expander("📐 Position Details"):
                         st.text(
-                            f"Position: ({bbox['left']:.1f}, {bbox['top']:.1f}) - "
-                            f"({bbox['right']:.1f}, {bbox['bottom']:.1f})"
+                            f"Position: ({bbox['left']:.1f}, {bbox['top']:.1f}) "
+                            f"- ({bbox['right']:.1f}, {bbox['bottom']:.1f})"
                         )
 
                 st.divider()
