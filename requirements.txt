@@ -17,3 +17,4 @@ langchain-embeddings-huggingface>=0.1.0
 langchain-embeddings-openai>=0.1.0
 langchain-embeddings-cohere>=0.1.0
 langchain-embeddings-sentence-transformers>=0.1.0
+langchain-llms-ollama>=0.1.0

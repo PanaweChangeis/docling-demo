@@ -12,11 +12,11 @@ from streamlit_extras.bottom_container import bottom
 
 # Load environment variables
 load_dotenv()
-OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY")
+# OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY")
 
-if not OPENROUTER_API_KEY:
-    st.error("❌ OPENROUTER_API_KEY is not set in environment variables.")
-    st.stop()
+# if not OPENROUTER_API_KEY:
+#     st.error("❌ OPENROUTER_API_KEY is not set in environment variables.")
+#     st.stop()
 
 # Import our modules
 from src.document_processor import DocumentProcessor

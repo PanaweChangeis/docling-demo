@@ -43,11 +43,11 @@ def create_documentation_agent(tools: List[BaseTool], model_name: str = "openai/
     # Initialize the language model
     #llm = ChatOpenAI(model=model_name, temperature=0)--previousc code for openai
     # Initialize the language model (OpenRouter)
-    llm = ChatOpenAI(
-        model=model_name,
+    from langchain_community.llms import Ollama
+
+    llm = Ollama(
+        model="llama3",
         temperature=0,
-        openai_api_key=os.getenv("OPENROUTER_API_KEY"),
-        openai_api_base="https://openrouter.ai/api/v1",
     )
 
     # Create a memory saver for conversation history
