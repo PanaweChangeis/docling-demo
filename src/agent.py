@@ -7,6 +7,8 @@ from langchain_core.prompts import ChatPromptTemplate
 from langgraph.prebuilt import create_react_agent  
 from langgraph.checkpoint.memory import MemorySaver
 from langchain_ollama import OllamaLLM
+from langchain_core.prompts import ChatPromptTemplate
+
 
 
 # System prompt for the document intelligence assistant
@@ -60,15 +62,14 @@ def create_documentation_agent(tools: List = None, model_name: str = "llama3"):
     #     checkpointer=memory
     # ) --previous code for openai
 
-    from langchain_core.prompts import ChatPromptTemplate
-    from langgraph.prebuilt import create_chat_agent
+
 
     prompt = ChatPromptTemplate.from_messages([
         ("system", SYSTEM_PROMPT),
         ("user", "{input}")
     ])
 
-    agent = create_chat_agent(
+    agent = create_react_agent(
         llm=llm,
         prompt=prompt,
         checkpointer=memory
