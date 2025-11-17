@@ -110,7 +110,7 @@ def process_and_index(uploaded_files):
 
         # Step 2: Vectorstore (load existing or build)
         vs_manager = VectorStoreManager()
-        existing_vs = vs_manager.load_existing_vectorstore()
+        existing_vs = vs_manager.load_vectorstore()
 
         if existing_vs is not None:
             with st.spinner("📦 Loading existing vector store from disk..."):
@@ -286,9 +286,9 @@ def render_structure_viz():
                     df = table_data["dataframe"].copy()
 
                     # Debug logs (will show in terminal)
-                    print("Original columns:", list(df.columns))
+                    print("=== RAW TABLE COLUMNS ===", list(df.columns))
 
-                    # Reset index to avoid index becoming a column
+                    # Reset index so index doesn't become a column
                     df = df.reset_index(drop=True)
 
                     # Clean + deduplicate column names
@@ -302,7 +302,7 @@ def render_structure_viz():
                         if not name:
                             name = f"col_{idx+1}"
 
-                        # Make sure names are unique
+                        # Ensure uniqueness
                         if name in seen:
                             seen[name] += 1
                             name = f"{name}_{seen[name]}"
@@ -312,10 +312,20 @@ def render_structure_viz():
                         cleaned_cols.append(name)
 
                     df.columns = cleaned_cols
-                    print("Cleaned columns:", cleaned_cols)
+                    print("=== CLEANED COLUMNS ===", cleaned_cols)
 
-                    # Now safe for Streamlit / pyarrow
-                    st.dataframe(df, use_container_width=True)
+                    # Safely render – even if Arrow still complains
+                    try:
+                        st.dataframe(df, use_container_width=True)
+                    except ValueError as e:
+                        # Last-resort fallback so the *app doesn’t crash*
+                        st.warning(
+                            "⚠️ This table has tricky headers that Arrow "
+                            "cannot handle. Showing a plain-text view instead."
+                        )
+                        st.text(df.to_string())
+                        print("Table render ValueError:", e)
+
                 else:
                     st.info("Table is empty")
 
