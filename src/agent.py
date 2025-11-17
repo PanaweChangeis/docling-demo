@@ -1,15 +1,6 @@
 """
 LangGraph agent configuration and setup.
 """
-from typing import List
-import os 
-from langchain_core.prompts import ChatPromptTemplate
-from langgraph.prebuilt import create_react_agent  
-from langgraph.checkpoint.memory import MemorySaver
-from langchain_ollama import OllamaLLM
-from langchain_core.prompts import ChatPromptTemplate
-
-
 
 # System prompt for the document intelligence assistant
 SYSTEM_PROMPT = """You are a helpful document intelligence assistant. You have access to documents that have been uploaded and processed (PDFs, Word documents, presentations, HTML files, etc.).
@@ -31,49 +22,55 @@ When answering:
 """
 
 
-def create_documentation_agent(tools: List = None, model_name: str = "llama3"):
+from typing import List, Optional
+
+from langchain_core.tools import BaseTool
+from langchain_core.prompts import ChatPromptTemplate
+from langgraph.prebuilt import create_chat_agent
+from langgraph.checkpoints.memory import MemorySaver
+from langchain_ollama import OllamaLLM
+
+SYSTEM_PROMPT = """
+You are a helpful assistant who answers questions about uploaded documents.
+Use the provided context when available. If you don't have enough information
+from the documents, say that you don't know instead of making something up.
+"""
+
+
+def create_documentation_agent(
+    tools: Optional[List[BaseTool]] = None,
+    model_name: str = "llama3",
+):
     """
-    Create a document intelligence assistant agent using LangGraph.
+    Create a simple document assistant agent using a local Ollama model.
 
-    Args:
-        tools: List of tools the agent can use
-        model_name: Name of the model to use
-
-    Returns:
-        A configured LangGraph agent
+    NOTE:
+        We are NOT using tool-calling here because local LLMs (OllamaLLM)
+        do not support the OpenAI-style .bind_tools() interface that
+        LangGraph's create_react_agent expects.
     """
-    # Initialize the language model
-    #llm = ChatOpenAI(model=model_name, temperature=0)--previousc code for openai
-    # Initialize the language model (OpenRouter)
 
+    # Local LLM – no OpenAI / OpenRouter keys needed
     llm = OllamaLLM(
-        model="llama3",
-        temperature=0.2,
+        model=model_name,
+        temperature=0.1,
     )
 
-    # Create a memory saver for conversation history
+    # Basic chat-style prompt
+    prompt = ChatPromptTemplate.from_messages(
+        [
+            ("system", SYSTEM_PROMPT),
+            ("user", "{input}"),
+        ]
+    )
+
     memory = MemorySaver()
 
-    # Create the ReAct agent
-    # agent = create_react_agent( 
-    #     llm,
-    #     tools=tools,
-    #     prompt=SYSTEM_PROMPT,
-    #     checkpointer=memory
-    # ) --previous code for openai
-
-
-
-    prompt = ChatPromptTemplate.from_messages([
-        ("system", SYSTEM_PROMPT),
-        ("user", "{input}")
-    ])
-
-    agent = create_react_agent(
+    # Simple chat agent compatible with OllamaLLM
+    agent = create_chat_agent(
         llm=llm,
         prompt=prompt,
-        checkpointer=memory
+        checkpointer=memory,
     )
-
 
     return agent
