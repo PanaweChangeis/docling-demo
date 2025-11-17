@@ -41,7 +41,7 @@ If the information is not in the documents, reply:
 
 def create_documentation_agent(
     tools: List[BaseTool],
-    model_name: str = "meta-llama/llama-3.1-8b-instruct",
+    model_name: str = "meta-llama/llama-3.1-70b-instruct",
 ):
     """
     Create a document QA agent using OpenRouter + LangGraph REACT.
