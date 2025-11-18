@@ -13,3 +13,7 @@ pandas>=2.0.0
 numpy<2
 langchain-text-splitters>=1.0.0
 langchain-community>=0.1.0
+sentence-transformers
+torch
+transformers
+tiktoken
