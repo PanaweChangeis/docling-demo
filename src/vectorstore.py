@@ -146,9 +146,10 @@ class VectorStoreManager:
     """Manages document chunking, embedding, and vector storage."""
 
     def __init__(self):
-        """Initialize the vector store manager."""
-        self.embeddings = HuggingFaceEmbeddings(
-            model_name="sentence-transformers/all-MiniLM-L6-v2"
+        self.embeddings = OpenAIEmbeddings(
+            model="openai/text-embedding-3-large",
+            api_key=os.getenv("OPENROUTER_API_KEY"),
+            base_url="https://openrouter.ai/api/v1",
         )
 
         self.text_splitter = RecursiveCharacterTextSplitter(

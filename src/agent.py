@@ -31,7 +31,7 @@ from langchain_core.tools import BaseTool
 
 def create_documentation_agent(
     tools: List[BaseTool],
-    model_name: str = "openai/gpt-4.1-mini",   # 👈 tools-capable model
+    model_name: str = "openai/gpt-4.1-mini",   
 ):
     """
     Create a document QA agent using OpenRouter + LangGraph REACT agent.
