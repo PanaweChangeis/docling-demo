@@ -3,6 +3,7 @@ Streamlit app for converting documents into a chatbot using Docling and LangGrap
 """
 
 import os
+import io
 import shutil  # ✅ needed for reset_index()
 import streamlit as st
 import pandas as pd
@@ -266,11 +267,82 @@ def render_structure_viz():
             st.info("No hierarchical structure detected")
 
     # ---------- TAB 3: TABLES (FIXED) ----------
+    # with tab3:
+    #     st.subheader("Tables")
+    #     tables_info = visualizer.get_tables_info()
+
+    #     if tables_info:
+    #         for table_data in tables_info:
+    #             st.markdown(
+    #                 f"### Table {table_data['table_number']} (Page {table_data['page']})"
+    #             )
+
+    #             if table_data["caption"]:
+    #                 st.caption(table_data["caption"])
+
+    #             if not table_data["is_empty"]:
+    #                 # Work on a copy
+    #                 df = table_data["dataframe"].copy()
+
+    #                 # Debug logs (will show in terminal)
+    #                 print("=== RAW TABLE COLUMNS ===", list(df.columns))
+
+    #                 # Reset index so index doesn't become a column
+    #                 df = df.reset_index(drop=True)
+
+    #                 # Clean + deduplicate column names
+    #                 cleaned_cols = []
+    #                 seen = {}
+
+    #                 for idx, col in enumerate(df.columns):
+    #                     name = str(col).strip()
+
+    #                     # Replace blank / NaN / None headers
+    #                     if not name:
+    #                         name = f"col_{idx+1}"
+
+    #                     # Ensure uniqueness
+    #                     if name in seen:
+    #                         seen[name] += 1
+    #                         name = f"{name}_{seen[name]}"
+    #                     else:
+    #                         seen[name] = 0
+
+    #                     cleaned_cols.append(name)
+
+    #                 df.columns = cleaned_cols
+    #                 print("=== CLEANED COLUMNS ===", cleaned_cols)
+
+    #                 # Safely render – even if Arrow still complains
+    #                 try:
+    #                     st.dataframe(df, width="stretch")
+    #                 except ValueError as e:
+    #                     # Last-resort fallback so the *app doesn’t crash*
+    #                     st.warning(
+    #                         "⚠️ This table has tricky headers that Arrow "
+    #                         "cannot handle. Showing a plain-text view instead."
+    #                     )
+    #                     st.text(df.to_string())
+    #                     print("Table render ValueError:", e)
+
+    #             else:
+    #                 st.info("Table is empty")
+
+    #             st.divider()
+    #     else:
+    #         st.info("No tables found in this document")
+
+    
+    # ---------- TAB 3: TABLES (WITH DOWNLOAD BUTTONS + "ALL TABLES" EXCEL) ----------
     with tab3:
         st.subheader("Tables")
         tables_info = visualizer.get_tables_info()
 
         if tables_info:
+
+            # Collect all non-empty tables to export later as one Excel file
+            all_tables = []  # list of (sheet_name, df)
+
             for table_data in tables_info:
                 st.markdown(
                     f"### Table {table_data['table_number']} (Page {table_data['page']})"
@@ -280,13 +352,12 @@ def render_structure_viz():
                     st.caption(table_data["caption"])
 
                 if not table_data["is_empty"]:
-                    # Work on a copy
                     df = table_data["dataframe"].copy()
 
-                    # Debug logs (will show in terminal)
+                    # Debug logs
                     print("=== RAW TABLE COLUMNS ===", list(df.columns))
 
-                    # Reset index so index doesn't become a column
+                    # Reset index so it doesn’t become a column
                     df = df.reset_index(drop=True)
 
                     # Clean + deduplicate column names
@@ -312,24 +383,75 @@ def render_structure_viz():
                     df.columns = cleaned_cols
                     print("=== CLEANED COLUMNS ===", cleaned_cols)
 
-                    # Safely render – even if Arrow still complains
+                    # Keep for "ALL tables" Excel export
+                    sheet_name = f"Table_{table_data['table_number']}_p{table_data['page']}"
+                    all_tables.append((sheet_name, df))
+
+                    # Display the table
                     try:
                         st.dataframe(df, width="stretch")
                     except ValueError as e:
-                        # Last-resort fallback so the *app doesn’t crash*
                         st.warning(
-                            "⚠️ This table has tricky headers that Arrow "
-                            "cannot handle. Showing a plain-text view instead."
+                            "⚠️ This table has tricky headers that Arrow cannot handle. "
+                            "Showing a plain-text view instead."
                         )
                         st.text(df.to_string())
                         print("Table render ValueError:", e)
+
+                    # ----------------------------
+                    # 📥 Per-table downloads
+                    # ----------------------------
+                    st.write("#### Download this table")
+
+                    # CSV download
+                    csv_bytes = df.to_csv(index=False).encode("utf-8")
+                    st.download_button(
+                        label="⬇ Download CSV",
+                        data=csv_bytes,
+                        file_name=f"table_{table_data['table_number']}.csv",
+                        mime="text/csv",
+                    )
+
+                    # Excel download
+                    excel_buffer = io.BytesIO()
+                    with pd.ExcelWriter(excel_buffer, engine="xlsxwriter") as writer:
+                        df.to_excel(writer, index=False)
+
+                    st.download_button(
+                        label="⬇ Download Excel",
+                        data=excel_buffer.getvalue(),
+                        file_name=f"table_{table_data['table_number']}.xlsx",
+                        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                    )
 
                 else:
                     st.info("Table is empty")
 
                 st.divider()
+
+            # ----------------------------
+            # ⭐ Download ALL tables as ONE Excel file (multiple sheets)
+            # ----------------------------
+            if all_tables:
+                st.subheader("📥 Download all tables")
+
+                all_excel_buffer = io.BytesIO()
+                with pd.ExcelWriter(all_excel_buffer, engine="xlsxwriter") as writer:
+                    for sheet_name, df in all_tables:
+                        # Excel sheet names max length = 31
+                        safe_sheet_name = sheet_name[:31]
+                        df.to_excel(writer, index=False, sheet_name=safe_sheet_name)
+
+                st.download_button(
+                    label="⬇ Download ALL tables as one Excel file",
+                    data=all_excel_buffer.getvalue(),
+                    file_name=f"{selected_doc_name}_tables.xlsx",
+                    mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                )
+
         else:
             st.info("No tables found in this document")
+
 
     # ---------- TAB 4: IMAGES ----------
     with tab4:
