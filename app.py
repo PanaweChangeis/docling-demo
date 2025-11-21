@@ -334,14 +334,16 @@ def render_structure_viz():
 
     
     # ---------- TAB 3: TABLES (WITH DOWNLOAD BUTTONS + "ALL TABLES" EXCEL) ----------
+# ---------- TAB 3: TABLES (GROUPED "ALL TABLES" DOWNLOAD ONLY) ----------
     with tab3:
         st.subheader("Tables")
         tables_info = visualizer.get_tables_info()
 
         if tables_info:
+            import io
 
-            # Collect all non-empty tables to export later as one Excel file
-            all_tables = []  # list of (sheet_name, df)
+            # For grouped "by type" ALL download
+            schema_groups = {}  # key -> {"columns": [...], "tables": [(table_num, page, df), ...]}
 
             for table_data in tables_info:
                 st.markdown(
@@ -383,11 +385,19 @@ def render_structure_viz():
                     df.columns = cleaned_cols
                     print("=== CLEANED COLUMNS ===", cleaned_cols)
 
-                    # Keep for "ALL tables" Excel export
-                    sheet_name = f"Table_{table_data['table_number']}_p{table_data['page']}"
-                    all_tables.append((sheet_name, df))
+                    # --------- GROUPING LOGIC: "type" = same column set ----------
+                    schema_key = tuple(col.lower() for col in cleaned_cols)
+                    if schema_key not in schema_groups:
+                        schema_groups[schema_key] = {
+                            "columns": cleaned_cols,
+                            "tables": [],
+                        }
 
-                    # Display the table
+                    schema_groups[schema_key]["tables"].append(
+                        (table_data["table_number"], table_data["page"], df)
+                    )
+
+                    # Just display the table; user can use the built-in download icon
                     try:
                         st.dataframe(df, width="stretch")
                     except ValueError as e:
@@ -398,59 +408,50 @@ def render_structure_viz():
                         st.text(df.to_string())
                         print("Table render ValueError:", e)
 
-                    # ----------------------------
-                    # 📥 Per-table downloads
-                    # ----------------------------
-                    st.write("#### Download this table")
-
-                    # CSV download
-                    csv_bytes = df.to_csv(index=False).encode("utf-8")
-                    st.download_button(
-                        label="⬇ Download CSV",
-                        data=csv_bytes,
-                        file_name=f"table_{table_data['table_number']}.csv",
-                        mime="text/csv",
-                    )
-
-                    # Excel download
-                    excel_buffer = io.BytesIO()
-                    with pd.ExcelWriter(excel_buffer, engine="xlsxwriter") as writer:
-                        df.to_excel(writer, index=False)
-
-                    st.download_button(
-                        label="⬇ Download Excel",
-                        data=excel_buffer.getvalue(),
-                        file_name=f"table_{table_data['table_number']}.xlsx",
-                        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-                    )
-
                 else:
                     st.info("Table is empty")
 
                 st.divider()
 
             # ----------------------------
-            # ⭐ Download ALL tables as ONE Excel file (multiple sheets)
+            # ⭐ Download ALL tables grouped by type (column signature)
             # ----------------------------
-            if all_tables:
-                st.subheader("📥 Download all tables")
+            if schema_groups:
+                st.subheader("📥 Download ALL tables (grouped by similar columns)")
 
-                all_excel_buffer = io.BytesIO()
-                with pd.ExcelWriter(all_excel_buffer, engine="xlsxwriter") as writer:
-                    for sheet_name, df in all_tables:
-                        # Excel sheet names max length = 31
-                        safe_sheet_name = sheet_name[:31]
-                        df.to_excel(writer, index=False, sheet_name=safe_sheet_name)
+                grouped_buffer = io.BytesIO()
+                with pd.ExcelWriter(grouped_buffer, engine="xlsxwriter") as writer:
+                    for i, (schema_key, info) in enumerate(schema_groups.items(), start=1):
+                        tables = info["tables"]
+
+                        dfs_with_meta = []
+                        for table_num, page, df in tables:
+                            tmp = df.copy()
+                            # Add metadata so you know where each row came from
+                            tmp.insert(0, "table_number", table_num)
+                            tmp.insert(1, "page", page)
+                            dfs_with_meta.append(tmp)
+
+                        grouped_df = pd.concat(dfs_with_meta, ignore_index=True)
+
+                        # Sheet name: Type_1, Type_2... (Excel limit 31 chars)
+                        sheet_name = f"Type_{i}"
+                        grouped_df.to_excel(
+                            writer,
+                            index=False,
+                            sheet_name=sheet_name[:31],
+                        )
 
                 st.download_button(
-                    label="⬇ Download ALL tables as one Excel file",
-                    data=all_excel_buffer.getvalue(),
-                    file_name=f"{selected_doc_name}_tables.xlsx",
+                    label="⬇ Download ALL tables (grouped by similar columns)",
+                    data=grouped_buffer.getvalue(),
+                    file_name=f"{selected_doc_name}_tables_grouped.xlsx",
                     mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
                 )
 
         else:
             st.info("No tables found in this document")
+
 
 
     # ---------- TAB 4: IMAGES ----------
