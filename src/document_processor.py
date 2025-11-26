@@ -103,6 +103,8 @@ from typing import List, Any
 from pathlib import Path
 from pdf2image import convert_from_path
 import pytesseract
+import numpy as np
+from paddleocr import PaddleOCR
 
 from docling.document_converter import DocumentConverter, PdfFormatOption
 from docling.datamodel.base_models import InputFormat
@@ -137,30 +139,71 @@ class DocumentProcessor:
         # Where we will store original files + markdown + json
         self.output_root = Path("outputs")
         self.output_root.mkdir(exist_ok=True)
+
+        # Initialize PaddleOCR only when we may need aggressive OCR
+        self.paddle_ocr = None
+        if self.force_ocr:
+            print("🔧 Initializing PaddleOCR (this may take a bit on first run)...")
+            self.paddle_ocr = PaddleOCR(lang="en", use_angle_cls=True)
+
         
-    def _ocr_pdf_with_tesseract(self, file_path: Path, dpi: int = 300) -> str:
+    def _ocr_pdf_with_paddleocr(
+        self,
+        file_path: Path,
+        dpi: int = 200,
+        max_pages: int = 5,
+    ) -> str:
         """
-        Fallback OCR: render each PDF page to an image and run Tesseract.
-        Returns concatenated text for the whole document.
+        Fallback OCR: render up to `max_pages` PDF pages to images and run PaddleOCR.
+        Returns concatenated text for the processed pages.
         """
-        print(f"🔍 Tesseract OCR fallback on {file_path} ...")
+        if self.paddle_ocr is None:
+            # Lazy init in case force_ocr was toggled later
+            print("🔧 Lazy-initializing PaddleOCR...")
+            self.paddle_ocr = PaddleOCR(lang="en", use_angle_cls=True)
+
+        print(
+            f"🔍 PaddleOCR fallback on {file_path} "
+            f"(dpi={dpi}, max_pages={max_pages}) ..."
+        )
+
         try:
-            pages = convert_from_path(str(file_path), dpi=dpi)
+            pages = convert_from_path(
+                str(file_path),
+                dpi=dpi,
+                first_page=1,
+                last_page=max_pages,
+            )
         except Exception as e:
             print(f"❌ pdf2image convert_from_path failed: {e}")
             return ""
 
         texts: List[str] = []
+        total_pages = len(pages)
+        print(f"📝 Rendering {total_pages} page(s) for OCR...")
+
         for i, page in enumerate(pages, start=1):
+            print(f"   🧠 PaddleOCR on page {i}/{total_pages} ...")
             try:
-                txt = pytesseract.image_to_string(page)
-                if txt.strip():
-                    texts.append(txt)
+                img = np.array(page)  # pdf2image gives PIL.Image; convert to numpy
+                result = self.paddle_ocr.ocr(img, cls=True)
+
+                # result is a list; we take the first page's lines
+                page_lines = []
+                if result:
+                    for line in result[0]:
+                        text = line[1][0]
+                        if text:
+                            page_lines.append(text)
+
+                page_text = "\n".join(page_lines)
+                if page_text.strip():
+                    texts.append(page_text)
             except Exception as e:
-                print(f"❌ Tesseract failed on page {i}: {e}")
+                print(f"❌ PaddleOCR failed on page {i}: {e}")
 
         full_text = "\n\n".join(texts)
-        print(f"✅ Tesseract OCR extracted {len(full_text)} characters")
+        print(f"✅ PaddleOCR extracted {len(full_text)} characters")
         return full_text
 
 
@@ -198,19 +241,20 @@ class DocumentProcessor:
                 # 3) Export to markdown and save as document.md
                 markdown_content = dl_doc.export_to_markdown()
 
-                # 🔁 If we're in force_ocr mode and Docling found almost nothing,
-                # run hard Tesseract OCR as a fallback.
                 if self.force_ocr and len(markdown_content.strip()) < 50:
-                    print("⚠️ Docling markdown is very short; running Tesseract OCR fallback...")
-                    ocr_text = self._ocr_pdf_with_tesseract(original_path)
+                    print("⚠️ Docling markdown is very short; running PaddleOCR fallback...")
+                    ocr_text = self._ocr_pdf_with_paddleocr(
+                        original_path,
+                        dpi=200,
+                        max_pages=5,   # you can increase later if this works well
+                    )
                     if ocr_text.strip():
                         markdown_content = ocr_text
-                        # Save separate file so you know this came from OCR
                         (doc_dir / "ocr_document.txt").write_text(
                             ocr_text, encoding="utf-8"
                         )
                     else:
-                        print("❌ Tesseract OCR fallback produced no text; keeping Docling output.")
+                        print("❌ PaddleOCR fallback produced no text; keeping Docling output.")
 
                 (doc_dir / "document.md").write_text(markdown_content, encoding="utf-8")
 
