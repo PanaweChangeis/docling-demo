@@ -109,19 +109,22 @@ from langchain_core.documents import Document
 
 
 class DocumentProcessor:
-    """Handles document processing using Docling."""
+    def __init__(self, force_ocr: bool = False):
+        """
+        Initialize the Docling DocumentConverter and output directory.
 
-    def __init__(self):
-        """Initialize the Docling DocumentConverter and output directory."""
-        # Configure pipeline options for PDF processing
+        """
+        self.force_ocr = force_ocr
+
+        # 👇 Configure pipeline options for PDF processing
         pipeline_options = PdfPipelineOptions(
-            do_ocr=True,                
-            ocr_engine="tesseract",
+            do_ocr=True,                      # always enable OCR
             do_table_structure=True,
             generate_picture_images=True,
-            images_scale=1.0
+            # when forcing OCR, bump image scale to help Tesseract
+            images_scale=2.0 if force_ocr else 1.0,
         )
-
+        # Initialize converter with PDF options
         self.converter = DocumentConverter(
             format_options={
                 InputFormat.PDF: PdfFormatOption(
