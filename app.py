@@ -116,21 +116,19 @@ def process_and_index(uploaded_files):
         with st.spinner("✂️ Chunking documents..."):
             chunks = vs_manager.chunk_documents(documents)
         
-        # Auto–OCR fallback: if chunks are empty, retry OCR
+        # Auto–OCR fallback: if chunks are empty, retry with forced OCR
         if len(chunks) == 0:
             st.warning("No text chunks found — attempting OCR fallback...")
 
-            # Run Docling again with *stronger* OCR
+            # Run DocumentProcessor with Tesseract-based fallback enabled
             processor = DocumentProcessor(force_ocr=True)
             documents, docling_docs = processor.process_uploaded_files(uploaded_files)
 
-            # Re-chunk after OCR retry
             chunks = vs_manager.chunk_documents(documents)
 
             if len(chunks) == 0:
                 st.error("OCR fallback failed — no text found. PDF may be a pure image scan.")
                 return
-
 
         with st.spinner("🔢 Creating vector store (this may take a while for large scanned PDFs)..."):
             vectorstore = vs_manager.create_vectorstore(chunks)

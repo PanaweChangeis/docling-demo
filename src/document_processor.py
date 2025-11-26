@@ -101,6 +101,8 @@ Docling integration for processing uploaded documents.
 import os
 from typing import List, Any
 from pathlib import Path
+from pdf2image import convert_from_path
+import pytesseract
 
 from docling.document_converter import DocumentConverter, PdfFormatOption
 from docling.datamodel.base_models import InputFormat
@@ -135,6 +137,32 @@ class DocumentProcessor:
         # Where we will store original files + markdown + json
         self.output_root = Path("outputs")
         self.output_root.mkdir(exist_ok=True)
+        
+    def _ocr_pdf_with_tesseract(self, file_path: Path, dpi: int = 300) -> str:
+        """
+        Fallback OCR: render each PDF page to an image and run Tesseract.
+        Returns concatenated text for the whole document.
+        """
+        print(f"🔍 Tesseract OCR fallback on {file_path} ...")
+        try:
+            pages = convert_from_path(str(file_path), dpi=dpi)
+        except Exception as e:
+            print(f"❌ pdf2image convert_from_path failed: {e}")
+            return ""
+
+        texts: List[str] = []
+        for i, page in enumerate(pages, start=1):
+            try:
+                txt = pytesseract.image_to_string(page)
+                if txt.strip():
+                    texts.append(txt)
+            except Exception as e:
+                print(f"❌ Tesseract failed on page {i}: {e}")
+
+        full_text = "\n\n".join(texts)
+        print(f"✅ Tesseract OCR extracted {len(full_text)} characters")
+        return full_text
+
 
     def process_uploaded_files(self, uploaded_files) -> tuple[List[Document], List[Any]]:
         """
@@ -169,6 +197,21 @@ class DocumentProcessor:
 
                 # 3) Export to markdown and save as document.md
                 markdown_content = dl_doc.export_to_markdown()
+
+                # 🔁 If we're in force_ocr mode and Docling found almost nothing,
+                # run hard Tesseract OCR as a fallback.
+                if self.force_ocr and len(markdown_content.strip()) < 50:
+                    print("⚠️ Docling markdown is very short; running Tesseract OCR fallback...")
+                    ocr_text = self._ocr_pdf_with_tesseract(original_path)
+                    if ocr_text.strip():
+                        markdown_content = ocr_text
+                        # Save separate file so you know this came from OCR
+                        (doc_dir / "ocr_document.txt").write_text(
+                            ocr_text, encoding="utf-8"
+                        )
+                    else:
+                        print("❌ Tesseract OCR fallback produced no text; keeping Docling output.")
+
                 (doc_dir / "document.md").write_text(markdown_content, encoding="utf-8")
 
                 # 4) Try to export full schema as JSON (best-effort)
