@@ -114,17 +114,21 @@ class DocumentProcessor:
     def __init__(self):
         """Initialize the Docling DocumentConverter and output directory."""
         # Configure pipeline options for PDF processing
-        pipeline_options = PdfPipelineOptions()
-        pipeline_options.do_ocr = True
-        pipeline_options.do_table_structure = True
-        pipeline_options.generate_picture_images = True  # Enable image extraction
-        pipeline_options.images_scale = 1.0  # Higher resolution for better quality
-
-        # Initialize converter with PDF options
-        self.converter = DocumentConverter(
-            format_options={InputFormat.PDF: PdfFormatOption(pipeline_options=pipeline_options)}
+        pipeline_options = PdfPipelineOptions(
+            do_ocr=True,                
+            ocr_engine="tesseract",
+            do_table_structure=True,
+            generate_picture_images=True,
+            images_scale=1.0
         )
 
+        self.converter = DocumentConverter(
+            format_options={
+                InputFormat.PDF: PdfFormatOption(
+                    pipeline_options=pipeline_options
+                )
+            }
+        )
         # Where we will store original files + markdown + json
         self.output_root = Path("outputs")
         self.output_root.mkdir(exist_ok=True)
