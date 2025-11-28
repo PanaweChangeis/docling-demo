@@ -120,14 +120,14 @@ class DocumentProcessor:
         """
         self.force_ocr = force_ocr
 
-        # 👇 Configure pipeline options for PDF processing
+        # Configure pipeline options for PDF processing
         pipeline_options = PdfPipelineOptions(
-            do_ocr=True,                      # always enable OCR
+            do_ocr=self.force_ocr,   
             do_table_structure=True,
             generate_picture_images=True,
-            # when forcing OCR, bump image scale to help Tesseract
-            images_scale=2.0 if force_ocr else 1.0,
+            images_scale=2.0 if self.force_ocr else 1.0,
         )
+
         # Initialize converter with PDF options
         self.converter = DocumentConverter(
             format_options={
