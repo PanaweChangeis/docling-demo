@@ -153,4 +153,4 @@ Feature requests
 
 📜 License
 
-MIT License (or specify your own)
+MIT License
