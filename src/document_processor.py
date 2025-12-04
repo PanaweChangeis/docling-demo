@@ -305,15 +305,12 @@
 Docling integration for processing uploaded documents.
 """
 
-import os
 from typing import List, Any
 from pathlib import Path
 
 from pypdf import PdfReader
-import pdfplumber
 
 from pdf2image import convert_from_path
-import pytesseract
 import numpy as np
 from paddleocr import PaddleOCR
 
@@ -323,79 +320,11 @@ from docling.datamodel.pipeline_options import PdfPipelineOptions
 from langchain_core.documents import Document
 
 
-# ---------- PDF NATURE CLASSIFICATION (LIGHTWEIGHT) ----------
-
-def classify_pdf_nature(pdf_path: str, sample_pages: int = 3) -> str:
-    """
-    Classify a PDF as TEXT_BASED, IMAGE_ONLY, HYBRID, or WEIRD_ENCODED.
-
-    - Uses pypdf to measure total extractable text characters.
-    - Uses pdfplumber on the first few pages to see if there are text/image objects.
-    """
-    try:
-        reader = PdfReader(pdf_path)
-        num_pages = len(reader.pages)
-    except Exception as e:
-        print(f"[NATURE] Could not open with PdfReader: {e}")
-        return "UNKNOWN"
-
-    total_text_chars = 0
-    for page in reader.pages:
-        try:
-            txt = page.extract_text() or ""
-        except Exception:
-            txt = ""
-        total_text_chars += len(txt)
-
-    pages_with_text_objs = 0
-    pages_with_images = 0
-
-    try:
-        with pdfplumber.open(pdf_path) as pdf:
-            for i, page in enumerate(pdf.pages, start=1):
-                if i > sample_pages:
-                    break
-                objs = page.objects
-                text_objs = objs.get("text", [])
-                image_objs = objs.get("image", [])
-
-                if text_objs:
-                    pages_with_text_objs += 1
-                if image_objs:
-                    pages_with_images += 1
-    except Exception as e:
-        print(f"[NATURE] pdfplumber inspection failed: {e}")
-
-    # Same logic as your inspector, but lighter
-    if (
-        total_text_chars == 0
-        and pages_with_text_objs == 0
-        and pages_with_images > 0
-    ):
-        nature = "IMAGE_ONLY"
-    elif total_text_chars > 0 and pages_with_text_objs > 0:
-        nature = "TEXT_BASED"
-    elif pages_with_text_objs > 0 and pages_with_images > 0:
-        nature = "HYBRID"
-    elif total_text_chars > 0:
-        # Text exists but no text objects/images in layout → your “weird” case
-        nature = "WEIRD_ENCODED"
-    else:
-        nature = "UNKNOWN"
-
-    print(
-        f"[NATURE] {pdf_path} → {nature} "
-        f"(chars={total_text_chars}, text_objs_pages={pages_with_text_objs}, "
-        f"image_pages={pages_with_images})"
-    )
-    return nature
-
-
 def pypdf_to_markdown(pdf_path: str) -> str:
     """
     Fallback: build a simple markdown string from pypdf text only.
 
-    This is for WEIRD_ENCODED PDFs where Docling has no structured view,
+    This is for PDFs where Docling's structured model is empty
     but pypdf can still read the text cleanly.
     """
     reader = PdfReader(pdf_path)
@@ -539,38 +468,58 @@ class DocumentProcessor:
                 dl_doc = None
                 markdown_content = ""
 
+                # ---------- PDFs: try Docling first ----------
                 if is_pdf:
-                    # ---------- NATURE-BASED ROUTING FOR PDFs ----------
-                    nature = classify_pdf_nature(str(original_path))
-                    print(f"[ROUTING] {filename} classified as {nature}")
-
-                    if nature == "WEIRD_ENCODED":
-                        # 🚧 Skip Docling, use pypdf-only markdown for RAG
-                        markdown_content = pypdf_to_markdown(str(original_path))
-                        # No Docling doc -> no tables/structure for this file
-                    else:
-                        # Normal path: let Docling handle layout, tables, etc.
+                    try:
                         result = self.converter.convert(str(original_path))
                         dl_doc = result.document
                         markdown_content = dl_doc.export_to_markdown()
 
-                        # Optional OCR fallback (still disabled for stability)
-                        # if self.force_ocr and len(markdown_content.strip()) < 50:
-                        #     print("⚠️ Docling markdown is very short; running PaddleOCR fallback...")
-                        #     ocr_text = self._ocr_pdf_with_paddleocr(
-                        #         original_path,
-                        #         dpi=200,
-                        #         max_pages=5,
-                        #     )
-                        #     if ocr_text.strip():
-                        #         markdown_content = ocr_text
-                        #         (doc_dir / "ocr_document.txt").write_text(
-                        #             ocr_text, encoding="utf-8"
-                        #         )
-                        #     else:
-                        #         print("❌ PaddleOCR fallback produced no text; keeping Docling output.")
+                        # Look at Docling's structured model
+                        pages = getattr(dl_doc, "pages", {}) or {}
+                        texts = getattr(dl_doc, "texts", []) or []
+                        tables = getattr(dl_doc, "tables", []) or []
+                        pictures = getattr(dl_doc, "pictures", []) or []
+
+                        num_pages = len(pages)
+                        num_texts = len(texts)
+                        num_tables = len(tables)
+                        num_pictures = len(pictures)
+
+                        print(
+                            f"[DOCLING] {filename}: pages={num_pages}, "
+                            f"texts={num_texts}, tables={num_tables}, "
+                            f"pictures={num_pictures}"
+                        )
+
+                        # If Docling has structure, treat it as normal
+                        if (
+                            num_texts == 0
+                            and num_tables == 0
+                            and num_pictures == 0
+                            and len(markdown_content.strip()) > 200
+                        ):
+                            # This is your "weird but text-heavy" case
+                            print(
+                                f"[ROUTING] Docling produced no structure for {filename} "
+                                f"but markdown has text; switching to pypdf-only."
+                            )
+                            markdown_content = pypdf_to_markdown(str(original_path))
+                            dl_doc = None  # no structured view available
+                        else:
+                            print(f"[ROUTING] Using Docling output for {filename}")
+
+                    except Exception as e:
+                        # Docling conversion blew up → pypdf-only
+                        print(
+                            f"[ROUTING] Docling failed on {filename}: {e}. "
+                            "Falling back to pypdf-only markdown."
+                        )
+                        markdown_content = pypdf_to_markdown(str(original_path))
+                        dl_doc = None
+
                 else:
-                    # Non-PDF (docx, pptx, html, etc.): just use Docling as before
+                    # ---------- Non-PDFs (docx, pptx, html, etc.) ----------
                     result = self.converter.convert(str(original_path))
                     dl_doc = result.document
                     markdown_content = dl_doc.export_to_markdown()
