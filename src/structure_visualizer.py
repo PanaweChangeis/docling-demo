@@ -202,7 +202,7 @@ from docling_core.types.doc import DoclingDocument
 
 from src.table_extractor import extract_tables   # 🔹 NEW
 from src.table_cleaning import clean_table_strings
-from src.alt_table_extractor import extract_tables_from_pdf
+#from src.alt_table_extractor import extract_tables_from_pdf
 
 
 class DocumentStructureVisualizer:
@@ -250,23 +250,8 @@ class DocumentStructureVisualizer:
             return 4
 
     def get_tables_info(self) -> List[Dict[str, Any]]:
-        """
-        Extract table information and convert to DataFrames.
-
-        Priority:
-        1) Docling native tables
-        2) Docling JSON/coordinate fallback (iterate_items)
-        3) pdfplumber fallback directly on the PDF file (if pdf_path is set)
-        """
-        tables_info: List[Dict[str, Any]] = []
-
-        # 1 & 2: Docling + JSON/coordinate fallback
+        ...
         extracted = extract_tables(self.doc, use_fallback_if_empty=True)
-
-        # 3: If still nothing and we know the original PDF path, try pdfplumber
-        if not extracted and self.pdf_path:
-            print(f"[TABLES] Docling found no tables; trying pdfplumber on {self.pdf_path}")
-            extracted = extract_tables_from_pdf(self.pdf_path)
 
         if not extracted:
             return tables_info
