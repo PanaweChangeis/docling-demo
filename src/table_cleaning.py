@@ -1,7 +1,9 @@
+# src/table_cleaning.py
 from __future__ import annotations
 
 import re
 import pandas as pd
+
 
 def _fix_spaced_letters(text: str) -> str:
     """
@@ -54,9 +56,16 @@ def _fix_spaced_letters(text: str) -> str:
 def clean_table_strings(df: pd.DataFrame) -> pd.DataFrame:
     """
     Clean spacing and letter-spaced text in all string columns of df.
+
+    Uses *positional* indexing (iloc) so it works even when there are
+    duplicate column names (where df[col] would return a DataFrame).
     """
     df = df.copy()
-    for col in df.columns:
-        if df[col].dtype == "object":
-            df[col] = df[col].apply(_fix_spaced_letters)
+    n_cols = df.shape[1]
+
+    for col_idx in range(n_cols):
+        col_series = df.iloc[:, col_idx]
+        if col_series.dtype == "object":
+            df.iloc[:, col_idx] = col_series.apply(_fix_spaced_letters)
+
     return df
