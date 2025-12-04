@@ -200,8 +200,8 @@ import pandas as pd
 import streamlit as st
 from docling_core.types.doc import DoclingDocument
 
-from src.table_extractor import extract_tables   # 🔹 NEW
-from src.table_cleaning import clean_table_strings
+from .table_extractor import extract_tables   # 🔹 NEW
+from .table_cleaning import clean_table_strings
 #from src.alt_table_extractor import extract_tables_from_pdf
 
 
@@ -250,7 +250,17 @@ class DocumentStructureVisualizer:
             return 4
 
     def get_tables_info(self) -> List[Dict[str, Any]]:
-        ...
+        """
+        Extract table information and convert to DataFrames.
+
+        Uses our extract_tables() helper so we can:
+        - Prefer Docling tables
+        - Fall back to pdfplumber/camelot when Docling finds nothing
+        - Clean up spacing issues in cell strings
+        """
+        tables_info: List[Dict[str, Any]] = []
+
+        # Use the unified extractor (Docling first, then fallback if needed)
         extracted = extract_tables(self.doc, use_fallback_if_empty=True)
 
         if not extracted:
@@ -259,20 +269,22 @@ class DocumentStructureVisualizer:
         for idx, t in enumerate(extracted, start=1):
             df = t.dataframe.copy()
 
-            # Clean spaced letters / junk spacing
+            # Clean spaced letters / leading/trailing junk spacing in string columns
             df = clean_table_strings(df)
 
             is_empty = df.dropna(how="all").empty
 
-            tables_info.append({
-                "table_number": idx,
-                "page": t.page if t.page is not None else None,
-                "caption": t.caption,
-                "dataframe": df,
-                "shape": df.shape,
-                "is_empty": is_empty,
-                "source": t.source,  # "docling", "fallback", or "pdfplumber"
-            })
+            tables_info.append(
+                {
+                    "table_number": idx,
+                    "page": t.page if getattr(t, "page", None) is not None else None,
+                    "caption": getattr(t, "caption", None),
+                    "dataframe": df,
+                    "shape": df.shape,
+                    "is_empty": is_empty,
+                    "source": getattr(t, "source", "docling"),  # "docling", "fallback", "pdfplumber", etc.
+                }
+            )
 
         return tables_info
 
