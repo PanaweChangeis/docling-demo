@@ -20,18 +20,49 @@ def extract_tables_from_pdf(
     """
     tables: List[ExtractedTable] = []
 
+    print(f"[ALT TABLE] Opening PDF with pdfplumber: {pdf_path}")
+
     try:
         with pdfplumber.open(pdf_path) as pdf:
+            num_pages = len(pdf.pages)
+            print(f"[ALT TABLE] PDF has {num_pages} page(s)")
+
+            # Two strategies: 'lines' then 'text'
+            line_settings = {
+                "vertical_strategy": "lines",
+                "horizontal_strategy": "lines",
+                "intersection_tolerance": 5,
+            }
+            text_settings = {
+                "vertical_strategy": "text",
+                "horizontal_strategy": "text",
+                "snap_tolerance": 3,
+            }
+
             for page_num, page in enumerate(pdf.pages, start=1):
+                print(f"[ALT TABLE] Page {page_num}: extracting tables (lines strategy)...")
                 try:
-                    raw_tables = page.extract_tables()
-                except Exception:
-                    continue
+                    raw_tables_lines = page.extract_tables(table_settings=line_settings)
+                except Exception as e:
+                    print(f"[ALT TABLE] Page {page_num} lines-strategy error: {e}")
+                    raw_tables_lines = []
 
-                if not raw_tables:
-                    continue
+                print(f"[ALT TABLE] Page {page_num}: {len(raw_tables_lines)} table(s) via lines")
 
-                for idx, raw in enumerate(raw_tables, start=1):
+                # If lines strategy fails, also try text-based detection
+                print(f"[ALT TABLE] Page {page_num}: extracting tables (text strategy)...")
+                try:
+                    raw_tables_text = page.extract_tables(table_settings=text_settings)
+                except Exception as e:
+                    print(f"[ALT TABLE] Page {page_num} text-strategy error: {e}")
+                    raw_tables_text = []
+
+                print(f"[ALT TABLE] Page {page_num}: {len(raw_tables_text)} table(s) via text")
+
+                # Merge both sets
+                all_raw = (raw_tables_lines or []) + (raw_tables_text or [])
+
+                for idx, raw in enumerate(all_raw, start=1):
                     if not raw:
                         continue
 
@@ -50,8 +81,10 @@ def extract_tables_from_pdf(
                             table_id=f"pdfplumber_p{page_num}_{idx}",
                         )
                     )
+
     except Exception as e:
         print(f"[ALT TABLE] pdfplumber failed on {pdf_path}: {e}")
+        return []
 
-    print(f"[ALT TABLE] pdfplumber extracted {len(tables)} tables from {pdf_path}")
+    print(f"[ALT TABLE] pdfplumber extracted {len(tables)} table(s) from {pdf_path}")
     return tables
