@@ -241,20 +241,20 @@ class DocumentProcessor:
                 # 3) Export to markdown and save as document.md
                 markdown_content = dl_doc.export_to_markdown()
 
-                if self.force_ocr and len(markdown_content.strip()) < 50:
-                    print("⚠️ Docling markdown is very short; running PaddleOCR fallback...")
-                    ocr_text = self._ocr_pdf_with_paddleocr(
-                        original_path,
-                        dpi=200,
-                        max_pages=5,   # you can increase later if this works well
-                    )
-                    if ocr_text.strip():
-                        markdown_content = ocr_text
-                        (doc_dir / "ocr_document.txt").write_text(
-                            ocr_text, encoding="utf-8"
-                        )
-                    else:
-                        print("❌ PaddleOCR fallback produced no text; keeping Docling output.")
+                # if self.force_ocr and len(markdown_content.strip()) < 50:
+                #     print("⚠️ Docling markdown is very short; running PaddleOCR fallback...")
+                #     ocr_text = self._ocr_pdf_with_paddleocr(
+                #         original_path,
+                #         dpi=200,
+                #         max_pages=5,   # you can increase later if this works well
+                #     )
+                #     if ocr_text.strip():
+                #         markdown_content = ocr_text
+                #         (doc_dir / "ocr_document.txt").write_text(
+                #             ocr_text, encoding="utf-8"
+                #         )
+                #     else:
+                #         print("❌ PaddleOCR fallback produced no text; keeping Docling output.")
 
                 (doc_dir / "document.md").write_text(markdown_content, encoding="utf-8")
 
