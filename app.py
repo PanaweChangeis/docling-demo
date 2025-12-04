@@ -239,7 +239,11 @@ def render_structure_viz():
         return
 
     # Create visualizer
-    visualizer = DocumentStructureVisualizer(selected_doc_data['doc'])
+    visualizer = DocumentStructureVisualizer(
+    selected_doc_data["doc"],
+    pdf_path=selected_doc_data.get("pdf_path"),
+)
+
 
     # Display structure in tabs
     tab1, tab2, tab3, tab4 = st.tabs(["📑 Summary", "🏗️ Hierarchy", "📊 Tables", "🖼️ Images"])

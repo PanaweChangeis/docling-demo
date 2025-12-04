@@ -201,20 +201,16 @@ import streamlit as st
 from docling_core.types.doc import DoclingDocument
 
 from src.table_extractor import extract_tables   # 🔹 NEW
-from src.table_cleaning import clean_table_strings  # 🔹 NEW
+from src.table_cleaning import clean_table_strings
+from src.alt_table_extractor import extract_tables_from_pdf
 
 
 class DocumentStructureVisualizer:
     """Extracts and organizes document structure from Docling documents."""
 
-    def __init__(self, docling_document: DoclingDocument):
-        """
-        Initialize with a Docling document.
-
-        Args:
-            docling_document: The DoclingDocument object from conversion
-        """
+    def __init__(self, docling_document: DoclingDocument, pdf_path: Optional[str] = None):
         self.doc = docling_document
+        self.pdf_path = pdf_path
 
     def get_document_hierarchy(self) -> List[Dict[str, Any]]:
         """
@@ -257,13 +253,20 @@ class DocumentStructureVisualizer:
         """
         Extract table information and convert to DataFrames.
 
-        Uses Docling's native tables when available; otherwise falls back
-        to a position-based reconstruction using iterate_items().
+        Priority:
+        1) Docling native tables
+        2) Docling JSON/coordinate fallback (iterate_items)
+        3) pdfplumber fallback directly on the PDF file (if pdf_path is set)
         """
         tables_info: List[Dict[str, Any]] = []
 
-        # 🔹 unified extraction (native first, fallback if needed)
+        # 1 & 2: Docling + JSON/coordinate fallback
         extracted = extract_tables(self.doc, use_fallback_if_empty=True)
+
+        # 3: If still nothing and we know the original PDF path, try pdfplumber
+        if not extracted and self.pdf_path:
+            print(f"[TABLES] Docling found no tables; trying pdfplumber on {self.pdf_path}")
+            extracted = extract_tables_from_pdf(self.pdf_path)
 
         if not extracted:
             return tables_info
@@ -271,19 +274,19 @@ class DocumentStructureVisualizer:
         for idx, t in enumerate(extracted, start=1):
             df = t.dataframe.copy()
 
-            # 🔹 clean weird spacing / letter-spaced text
+            # Clean spaced letters / junk spacing
             df = clean_table_strings(df)
 
             is_empty = df.dropna(how="all").empty
 
             tables_info.append({
-                'table_number': idx,
-                'page': t.page if t.page is not None else None,
-                'caption': t.caption,
-                'dataframe': df,
-                'shape': df.shape,
-                'is_empty': is_empty,
-                'source': t.source,  # "docling" or "fallback" – handy for debugging
+                "table_number": idx,
+                "page": t.page if t.page is not None else None,
+                "caption": t.caption,
+                "dataframe": df,
+                "shape": df.shape,
+                "is_empty": is_empty,
+                "source": t.source,  # "docling", "fallback", or "pdfplumber"
             })
 
         return tables_info

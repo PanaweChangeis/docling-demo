@@ -279,7 +279,12 @@ class DocumentProcessor:
                 documents.append(doc)
 
                 # 6) Keep Docling document for structure visualizer
-                docling_docs.append({"filename": filename, "doc": dl_doc})
+                docling_docs.append({
+                    'filename': filename,
+                    'doc': dl_doc,
+                    'pdf_path': str(original_path),
+                })
+
 
                 print(f"✅ Successfully processed {filename}")
                 print(f"   → Original:   {original_path}")
