@@ -7,12 +7,10 @@ from pypdf import PdfReader
 def inspect_pdf_nature(pdf_path: str) -> None:
     print(f"=== Inspecting {pdf_path} ===")
 
-    # 1) Basic metadata
     reader = PdfReader(pdf_path)
     num_pages = len(reader.pages)
     print(f"Pages: {num_pages}")
 
-    # 2) Check pypdf text extraction
     total_text_chars = 0
     example_page_text = ""
 
@@ -29,7 +27,6 @@ def inspect_pdf_nature(pdf_path: str) -> None:
     print("Sample from page 1 (pypdf):")
     print(repr(example_page_text))
 
-    # 3) Look at pdfplumber objects
     num_pages_with_text_objs = 0
     num_pages_with_images = 0
 
@@ -46,13 +43,19 @@ def inspect_pdf_nature(pdf_path: str) -> None:
                 num_pages_with_images += 1
 
             if i == 1:
-                print(f"Page 1: text_objs={len(text_objs)}, images={len(image_objs)}, lines={len(line_objs)}")
+                print(
+                    f"Page 1: text_objs={len(text_objs)}, "
+                    f"images={len(image_objs)}, lines={len(line_objs)}"
+                )
 
     print(f"Pages with text objects: {num_pages_with_text_objs}/{num_pages}")
     print(f"Pages with image objects: {num_pages_with_images}/{num_pages}")
 
-    # 4) Rough classification
-    if total_text_chars == 0 and num_pages_with_text_objs == 0 and num_pages_with_images > 0:
+    if (
+        total_text_chars == 0
+        and num_pages_with_text_objs == 0
+        and num_pages_with_images > 0
+    ):
         nature = "IMAGE_ONLY"
     elif total_text_chars > 0 and num_pages_with_text_objs > 0:
         nature = "TEXT_BASED"
@@ -62,3 +65,13 @@ def inspect_pdf_nature(pdf_path: str) -> None:
         nature = "WEIRD/ENCODED"
 
     print(f"🧬 PDF nature: {nature}")
+
+
+if __name__ == "__main__":
+    import argparse
+
+    parser = argparse.ArgumentParser()
+    parser.add_argument("pdf_path", help="Path to the PDF to inspect")
+    args = parser.parse_args()
+
+    inspect_pdf_nature(args.pdf_path)
