@@ -318,6 +318,8 @@ from docling.datamodel.base_models import InputFormat
 from docling.datamodel.pipeline_options import PdfPipelineOptions
 from langchain_core.documents import Document
 
+import shutil
+
 
 def pypdf_to_markdown(pdf_path: str) -> str:
     """
@@ -454,6 +456,8 @@ class DocumentProcessor:
 
             # Create per-document output folder: outputs/<file-stem>/
             doc_dir = self.output_root / Path(filename).stem
+            if doc_dir.exists():
+                shutil.rmtree(doc_dir)
             doc_dir.mkdir(parents=True, exist_ok=True)
 
             # 1) Save original uploaded file
