@@ -356,7 +356,7 @@ class DocumentProcessor:
             generate_picture_images=True,
             images_scale=2.0 if self.force_ocr else 1.0,
         )
-
+        pipeline_options.allow_external_plugins = True
         # Initialize converter with PDF options
         self.converter = DocumentConverter(
             format_options={
