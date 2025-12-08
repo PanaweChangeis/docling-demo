@@ -97,7 +97,7 @@ def process_and_index(uploaded_files):
     try:
         # Step 1: Docling processing
         with st.spinner(f"📄 Processing {len(uploaded_files)} document(s) with Docling..."):
-            processor = DocumentProcessor()
+            processor = DocumentProcessor(force_ocr=True)
             documents, docling_docs = processor.process_uploaded_files(uploaded_files)
             st.session_state.docling_docs = docling_docs
 
