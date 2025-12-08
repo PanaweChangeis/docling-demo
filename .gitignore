@@ -10,3 +10,7 @@ venv/
 
 # Chroma
 chroma_db/
+
+git add outputs
+git commit -m "Add outputs to .gitignore"
+git push origin master

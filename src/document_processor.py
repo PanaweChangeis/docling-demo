@@ -369,6 +369,7 @@ class DocumentProcessor:
         # Where we will store original files + markdown + json
         self.output_root = Path("outputs")
         self.output_root.mkdir(exist_ok=True)
+        print(f"📁 Output root directory: {self.output_root.resolve()}")
 
         # Initialize PaddleOCR only when we may need aggressive OCR
         self.paddle_ocr = None

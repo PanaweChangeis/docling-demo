@@ -152,7 +152,7 @@ class VectorStoreManager:
         )
 
         self.text_splitter = RecursiveCharacterTextSplitter(
-            chunk_size=3000,
+            chunk_size=1200,
             chunk_overlap=200,
             length_function=len,
         )
@@ -198,7 +198,7 @@ class VectorStoreManager:
             print(f"❌ Error creating vector store: {str(e)}")
             raise
 
-    def search_similar(self, vectorstore: Chroma, query: str, k: int = 4) -> List[Document]:
+    def search_similar(self, vectorstore: Chroma, query: str, k: int = 8) -> List[Document]:
         """
         Perform semantic similarity search.
         """
